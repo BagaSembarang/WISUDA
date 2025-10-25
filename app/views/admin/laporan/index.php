@@ -35,17 +35,31 @@
                         </div>
                         <div class="col-md-4">
                             <div class="d-grid gap-2 d-md-flex">
-                                <a id="btn_view" href="#" class="btn btn-primary disabled">
-                                    <i class="fas fa-eye"></i> Lihat Laporan
+                                <a id="btn_view_presensi" href="#" class="btn btn-primary disabled">
+                                    <i class="fas fa-clipboard-list"></i> Lihat Presensi
                                 </a>
-                                <a id="btn_export" href="#" class="btn btn-success disabled">
-                                    <i class="fas fa-file-pdf"></i> Export PDF
+                                <a id="btn_view_toga" href="#" class="btn btn-secondary disabled">
+                                    <i class="fas fa-tshirt"></i> Lihat Toga
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-8"></div>
+                        <div class="col-md-4">
+                            <div class="d-grid gap-2 d-md-flex">
+                                <a id="btn_export_presensi" href="#" class="btn btn-success disabled">
+                                    <i class="fas fa-file-pdf"></i> Export PDF Presensi
+                                </a>
+                                <a id="btn_export_toga" href="#" class="btn btn-success disabled">
+                                    <i class="fas fa-file-pdf"></i> Export PDF Toga
                                 </a>
                                 <a id="btn_kupon" href="#" class="btn btn-warning disabled">
                                     <i class="fas fa-ticket-alt"></i> Print Kupon
                                 </a>
                             </div>
                         </div>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -60,16 +74,20 @@
 <script>
 const periodeSelect = document.getElementById('periode_id');
 const sesiSelect = document.getElementById('sesi_id');
-const btnView = document.getElementById('btn_view');
-const btnExport = document.getElementById('btn_export');
+const btnViewPresensi = document.getElementById('btn_view_presensi');
+const btnViewToga = document.getElementById('btn_view_toga');
+const btnExportPresensi = document.getElementById('btn_export_presensi');
+const btnExportToga = document.getElementById('btn_export_toga');
 const btnKupon = document.getElementById('btn_kupon');
 
 periodeSelect.addEventListener('change', async () => {
     const periodeId = periodeSelect.value;
     sesiSelect.innerHTML = '<option value="">-- Pilih Sesi --</option>';
     sesiSelect.disabled = true;
-    btnView.classList.add('disabled');
-    btnExport.classList.add('disabled');
+    btnViewPresensi.classList.add('disabled');
+    btnViewToga.classList.add('disabled');
+    btnExportPresensi.classList.add('disabled');
+    btnExportToga.classList.add('disabled');
     btnKupon.classList.add('disabled');
 
     if (!periodeId) return;
@@ -97,20 +115,28 @@ periodeSelect.addEventListener('change', async () => {
 sesiSelect.addEventListener('change', () => {
     const sesiId = sesiSelect.value;
     if (!sesiId) {
-        btnView.classList.add('disabled');
-        btnExport.classList.add('disabled');
+        btnViewPresensi.classList.add('disabled');
+        btnViewToga.classList.add('disabled');
+        btnExportPresensi.classList.add('disabled');
+        btnExportToga.classList.add('disabled');
         btnKupon.classList.add('disabled');
-        btnView.href = '#';
-        btnExport.href = '#';
+        btnViewPresensi.href = '#';
+        btnViewToga.href = '#';
+        btnExportPresensi.href = '#';
+        btnExportToga.href = '#';
         btnKupon.href = '#';
         return;
     }
-    btnView.classList.remove('disabled');
-    btnExport.classList.remove('disabled');
+    btnViewPresensi.classList.remove('disabled');
+    btnViewToga.classList.remove('disabled');
+    btnExportPresensi.classList.remove('disabled');
+    btnExportToga.classList.remove('disabled');
     btnKupon.classList.remove('disabled');
 
-    btnView.href = '<?= url('laporan/presensi/') ?>' + sesiId;
-    btnExport.href = '<?= url('laporan/exportPDF/') ?>' + sesiId + '/presensi';
+    btnViewPresensi.href = '<?= url('laporan/presensi/') ?>' + sesiId;
+    btnViewToga.href = '<?= url('laporan/toga/') ?>' + sesiId;
+    btnExportPresensi.href = '<?= url('laporan/exportPDF/') ?>' + sesiId + '/presensi';
+    btnExportToga.href = '<?= url('laporan/exportPDF/') ?>' + sesiId + '/toga';
     btnKupon.href = '<?= url('laporan/printKupon/') ?>' + sesiId;
 });
 </script>

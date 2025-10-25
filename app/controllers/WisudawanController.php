@@ -392,6 +392,61 @@ class WisudawanController extends Controller {
         $this->view('admin/wisudawan/view', $data);
     }
     
+    public function edit($id, $periodeId) {
+        $this->wisudawanModel->getTableByPeriode($periodeId);
+        $wisudawan = $this->wisudawanModel->find($id);
+        if (!$wisudawan) {
+            setFlash('danger', 'Data wisudawan tidak ditemukan');
+            $this->redirect('admin/periode');
+        }
+        $sesi = $this->sesiModel->find($wisudawan['sesi_id']);
+        
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $nim = trim($this->post('nim'));
+            $nama = trim($this->post('nama_lengkap'));
+            $prodi = trim($this->post('program_studi'));
+            $fak = trim($this->post('fakultas'));
+            $ipk = trim($this->post('ipk'));
+            $predikat = trim($this->post('predikat'));
+            $email = trim($this->post('email'));
+            $nohp = $this->preservePhone($this->post('no_hp'));
+            $toga = strtoupper(trim($this->post('ukuran_toga')));
+            $kursi = trim($this->post('nomor_kursi'));
+            
+            $allowedToga = ['S','M','L','XL','XXL'];
+            if (!in_array($toga, $allowedToga, true)) { $toga = 'M'; }
+            $ipkVal = ($ipk === '' ? null : $ipk);
+            
+            $ok = $this->wisudawanModel->update($id, [
+                'nim' => $nim,
+                'nama_lengkap' => $nama,
+                'program_studi' => $prodi,
+                'fakultas' => $fak,
+                'ipk' => $ipkVal,
+                'predikat' => $predikat,
+                'email' => $email,
+                'no_hp' => $nohp,
+                'ukuran_toga' => $toga,
+                'nomor_kursi' => $kursi,
+            ]);
+            
+            if ($ok) {
+                setFlash('success', 'Data berhasil diperbarui');
+            } else {
+                setFlash('danger', 'Gagal menyimpan perubahan');
+            }
+            $this->redirect('wisudawan/detail/' . $id . '/' . $periodeId);
+        } else {
+            $data = [
+                'title' => 'Edit Wisudawan - ' . $wisudawan['nama_lengkap'],
+                'wisudawan' => $wisudawan,
+                'sesi' => $sesi,
+                'periode_id' => $periodeId
+            ];
+            $this->view('admin/wisudawan/edit', $data);
+        }
+    }
+    
     /**
      * Send WhatsApp message
      */

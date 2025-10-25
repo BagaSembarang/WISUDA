@@ -62,68 +62,107 @@ class LaporanController extends Controller {
         $this->view('admin/laporan/presensi', $data);
     }
     
+    public function toga($sesiId) {
+        $sesi = $this->sesiModel->getWithPeriode($sesiId);
+        
+        if (!$sesi) {
+            setFlash('danger', 'Sesi tidak ditemukan');
+            $this->redirect('laporan/index');
+        }
+        
+        $wisudawanList = $this->wisudawanModel->getBySesi($sesiId, $sesi['periode_id']);
+        $stats = $this->wisudawanModel->getStatsBySesi($sesiId, $sesi['periode_id']);
+        
+        $data = [
+            'title' => 'Laporan Pengambilan Toga - ' . $sesi['nama_sesi'],
+            'sesi' => $sesi,
+            'wisudawan_list' => $wisudawanList,
+            'stats' => $stats
+        ];
+        
+        $this->view('admin/laporan/toga', $data);
+    }
+    
     /**
      * Export to PDF
      */
     public function exportPDF($sesiId, $type = 'presensi') {
-        // Use FPDF from composer package setasign/fpdf
         require_once BASE_PATH . '/vendor/setasign/fpdf/fpdf.php';
         
         $sesi = $this->sesiModel->getWithPeriode($sesiId);
-        
         if (!$sesi) {
             die('Sesi tidak ditemukan');
         }
-        
         $wisudawanList = $this->wisudawanModel->getBySesi($sesiId, $sesi['periode_id']);
         
-        $pdf = new FPDF('L', 'mm', 'A4');
-        $pdf->AddPage();
-        $pdf->SetFont('Arial', 'B', 16);
-        
-        // Title
-        $pdf->Cell(0, 10, 'LAPORAN ' . strtoupper($type), 0, 1, 'C');
-        $pdf->SetFont('Arial', '', 12);
-        $pdf->Cell(0, 8, $sesi['nama_periode'] . ' - ' . $sesi['nama_sesi'], 0, 1, 'C');
-        $pdf->Ln(5);
-        
-        // Table header
-        $pdf->SetFont('Arial', 'B', 10);
-        $pdf->Cell(10, 7, 'No', 1, 0, 'C');
-        $pdf->Cell(30, 7, 'NIM', 1, 0, 'C');
-        $pdf->Cell(60, 7, 'Nama', 1, 0, 'C');
-        $pdf->Cell(50, 7, 'Program Studi', 1, 0, 'C');
-        
-        if ($type === 'presensi') {
-            $pdf->Cell(30, 7, 'Toga', 1, 0, 'C');
-            $pdf->Cell(30, 7, 'Gladi', 1, 0, 'C');
-            $pdf->Cell(30, 7, 'Hari-H', 1, 0, 'C');
-            $pdf->Cell(30, 7, 'Konsumsi', 1, 1, 'C');
-        } elseif ($type === 'ttd') {
-            $pdf->Cell(30, 7, 'Ukuran Toga', 1, 0, 'C');
-            $pdf->Cell(40, 7, 'TTD Toga', 1, 0, 'C');
-            $pdf->Cell(40, 7, 'TTD Ijazah', 1, 1, 'C');
-        }
-        
-        // Table content
-        $pdf->SetFont('Arial', '', 9);
-        $no = 1;
-        
+        // Group by fakultas
+        $groups = [];
         foreach ($wisudawanList as $w) {
-            $pdf->Cell(10, 6, $no++, 1, 0, 'C');
-            $pdf->Cell(30, 6, $w['nim'], 1, 0);
-            $pdf->Cell(60, 6, substr($w['nama_lengkap'], 0, 30), 1, 0);
-            $pdf->Cell(50, 6, substr($w['program_studi'], 0, 25), 1, 0);
+            $fak = trim((string)($w['fakultas'] ?? ''));
+            if ($fak === '') { $fak = 'Lainnya'; }
+            if (!isset($groups[$fak])) { $groups[$fak] = []; }
+            $groups[$fak][] = $w;
+        }
+        ksort($groups, SORT_NATURAL | SORT_FLAG_CASE);
+        
+        $pdf = new FPDF('L', 'mm', 'A4');
+        
+        foreach ($groups as $fakultas => $items) {
+            $pdf->AddPage();
+            $pdf->SetFont('Arial', 'B', 16);
+            $pdf->Cell(0, 10, 'LAPORAN ' . strtoupper($type), 0, 1, 'C');
+            $pdf->SetFont('Arial', '', 12);
+            $pdf->Cell(0, 8, $sesi['nama_periode'] . ' - ' . $sesi['nama_sesi'], 0, 1, 'C');
+            $pdf->Ln(2);
+            $pdf->SetFont('Arial', '', 11);
+            $pdf->Cell(0, 7, 'Fakultas: ' . $fakultas, 0, 1, 'L');
+            $pdf->Ln(2);
+            
+            // Table header
+            $pdf->SetFont('Arial', 'B', 10);
+            $pdf->Cell(10, 7, 'No', 1, 0, 'C');
+            $pdf->Cell(30, 7, 'NIM', 1, 0, 'C');
+            $pdf->Cell(70, 7, 'Nama', 1, 0, 'C');
+            $pdf->Cell(60, 7, 'Program Studi', 1, 0, 'C');
             
             if ($type === 'presensi') {
-                $pdf->Cell(30, 6, $w['presensi_toga_at'] ? 'Ya' : 'Belum', 1, 0, 'C');
-                $pdf->Cell(30, 6, $w['presensi_gladi_at'] ? 'Ya' : 'Belum', 1, 0, 'C');
-                $pdf->Cell(30, 6, $w['presensi_hadir_at'] ? 'Ya' : 'Belum', 1, 0, 'C');
-                $pdf->Cell(30, 6, $w['presensi_konsumsi_at'] ? 'Ya' : 'Belum', 1, 1, 'C');
-            } elseif ($type === 'ttd') {
-                $pdf->Cell(30, 6, $w['ukuran_toga'], 1, 0, 'C');
-                $pdf->Cell(40, 6, $w['ttd_toga'] ? 'Ada' : '-', 1, 0, 'C');
-                $pdf->Cell(40, 6, $w['ttd_hadir'] ? 'Ada' : '-', 1, 1, 'C');
+                $pdf->Cell(25, 7, 'Toga', 1, 0, 'C');
+                $pdf->Cell(25, 7, 'Gladi', 1, 0, 'C');
+                $pdf->Cell(25, 7, 'Hari-H', 1, 0, 'C');
+                $pdf->Cell(25, 7, 'Konsumsi', 1, 1, 'C');
+            } elseif ($type === 'toga') {
+                $pdf->Cell(25, 7, 'Ukuran', 1, 0, 'C');
+                $pdf->Cell(30, 7, 'Ambil Toga', 1, 0, 'C');
+                $pdf->Cell(40, 7, 'Keterangan', 1, 1, 'C');
+            } else {
+                $pdf->Cell(25, 7, 'Ukuran', 1, 0, 'C');
+                $pdf->Cell(30, 7, 'TTD Toga', 1, 0, 'C');
+                $pdf->Cell(40, 7, 'TTD Ijazah', 1, 1, 'C');
+            }
+            
+            // Table rows
+            $pdf->SetFont('Arial', '', 9);
+            $no = 1;
+            foreach ($items as $w) {
+                $pdf->Cell(10, 6, $no++, 1, 0, 'C');
+                $pdf->Cell(30, 6, $w['nim'], 1, 0);
+                $pdf->Cell(70, 6, substr($w['nama_lengkap'], 0, 42), 1, 0);
+                $pdf->Cell(60, 6, substr($w['program_studi'], 0, 34), 1, 0);
+                if ($type === 'presensi') {
+                    $pdf->Cell(25, 6, $w['presensi_toga_at'] ? 'Ya' : '-', 1, 0, 'C');
+                    $pdf->Cell(25, 6, $w['presensi_gladi_at'] ? 'Ya' : '-', 1, 0, 'C');
+                    $pdf->Cell(25, 6, $w['presensi_hadir_at'] ? 'Ya' : '-', 1, 0, 'C');
+                    $pdf->Cell(25, 6, $w['presensi_konsumsi_at'] ? 'Ya' : '-', 1, 1, 'C');
+                } elseif ($type === 'toga') {
+                    $pdf->Cell(25, 6, $w['ukuran_toga'], 1, 0, 'C');
+                    $pdf->Cell(30, 6, $w['presensi_toga_at'] ? 'Sudah' : 'Belum', 1, 0, 'C');
+                    $ket = $w['keterangan_toga'] ? substr($w['keterangan_toga'], 0, 25) : '-';
+                    $pdf->Cell(40, 6, $ket, 1, 1);
+                } else {
+                    $pdf->Cell(25, 6, $w['ukuran_toga'], 1, 0, 'C');
+                    $pdf->Cell(30, 6, $w['ttd_toga'] ? 'Ada' : '-', 1, 0, 'C');
+                    $pdf->Cell(40, 6, $w['ttd_hadir'] ? 'Ada' : '-', 1, 1, 'C');
+                }
             }
         }
         
