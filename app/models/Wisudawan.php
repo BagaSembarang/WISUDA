@@ -224,13 +224,12 @@ class Wisudawan extends Model {
     }
     
     /**
-     * Get statistics by sesi
+     * Get stats by sesi
      */
     public function getStatsBySesi($sesiId, $periodeId) {
         $this->getTableByPeriode($periodeId);
-        
-        return $this->queryOne("
-            SELECT 
+        return $this->queryOne(
+            "SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN status_rsvp = 'confirmed' THEN 1 ELSE 0 END) as rsvp_confirmed,
                 SUM(CASE WHEN status_rsvp = 'declined' THEN 1 ELSE 0 END) as rsvp_declined,
@@ -239,18 +238,26 @@ class Wisudawan extends Model {
                 SUM(CASE WHEN presensi_hadir_at IS NOT NULL THEN 1 ELSE 0 END) as presensi_hadir,
                 SUM(CASE WHEN presensi_konsumsi_at IS NOT NULL THEN 1 ELSE 0 END) as presensi_konsumsi
             FROM `{$this->tableName}`
-            WHERE sesi_id = ?
-        ", [$sesiId]);
+            WHERE sesi_id = ?",
+            [$sesiId]
+        );
     }
-    
-    /**
-     * Get denah kehadiran (yang sudah presensi hari-H)
-     */
+
+    public function getSeatCountWithPresensi($sesiId, $periodeId) {
+        $this->getTableByPeriode($periodeId);
+        $row = $this->queryOne(
+            "SELECT COUNT(DISTINCT nomor_kursi) as c 
+             FROM `{$this->tableName}` 
+             WHERE sesi_id = ? AND presensi_hadir_at IS NOT NULL AND nomor_kursi IS NOT NULL AND nomor_kursi <> ''",
+            [$sesiId]
+        );
+        return (int)($row['c'] ?? 0);
+    }
+
     public function getDenahKehadiran($sesiId, $periodeId) {
         $this->getTableByPeriode($periodeId);
-        
-        return $this->queryAll("
-            SELECT 
+        return $this->queryAll(
+            "SELECT 
                 nomor_kursi,
                 nama_lengkap,
                 nim,
@@ -259,7 +266,8 @@ class Wisudawan extends Model {
                 CASE WHEN presensi_hadir_at IS NOT NULL THEN 'hadir' ELSE 'belum' END as status_kehadiran
             FROM `{$this->tableName}`
             WHERE sesi_id = ?
-            ORDER BY nomor_kursi
-        ", [$sesiId]);
+            ORDER BY nomor_kursi",
+            [$sesiId]
+        );
     }
 }

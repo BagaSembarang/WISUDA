@@ -9,10 +9,9 @@ class LOController extends Controller {
     private $periodeModel;
     
     public function __construct() {
-        $this->requireRole('lo');
-        $this->wisudawanModel = new Wisudawan();
-        $this->sesiModel = new SesiWisuda();
-        $this->periodeModel = new PeriodeWisuda();
+        $this->wisudawanModel = $this->model('Wisudawan');
+        $this->sesiModel = $this->model('SesiWisuda');
+        $this->periodeModel = $this->model('PeriodeWisuda');
     }
     
     /**
@@ -27,6 +26,63 @@ class LOController extends Controller {
         ];
         
         $this->view('lo/dashboard', $data);
+    }
+    
+    public function overview($periodeId, $sesiId = null) {
+        $periode = $this->periodeModel->find($periodeId);
+        if (!$periode) {
+            setFlash('danger', 'Periode tidak ditemukan');
+            $this->redirect('lo/dashboard');
+        }
+        $sesiList = $this->sesiModel->getByPeriode($periodeId);
+        if (empty($sesiList)) {
+            $data = [
+                'title' => 'Ringkasan Sesi',
+                'periode' => $periode,
+                'sesi' => null,
+                'sesi_list' => [],
+                'stats' => ['total'=>0,'presensi_hadir'=>0],
+            ];
+            $this->view('lo/overview', $data);
+            return;
+        }
+        $selectedId = $sesiId ? (int)$sesiId : (int)$sesiList[0]['id'];
+        $sesi = $this->sesiModel->find($selectedId);
+        $stats = $this->wisudawanModel->getStatsBySesi($selectedId, $periodeId);
+        $tidakHadir = max(0, (int)($stats['total'] ?? 0) - (int)($stats['presensi_hadir'] ?? 0));
+        $denahModel = $this->model('DenahKursi');
+        $denah = $denahModel->getBySesi($selectedId);
+        $rows = [];
+        $maxCol = 0;
+        $grid = [];
+        foreach ($denah as $d) {
+            $rows[$d['baris']] = true;
+            $col = (int)$d['kolom'];
+            if ($col > $maxCol) { $maxCol = $col; }
+            $grid[$d['baris'] . '-' . $col] = $d['nomor_kursi'];
+        }
+        $rows = array_keys($rows);
+        sort($rows);
+        $occupied = [];
+        $wis = $this->wisudawanModel->getBySesi($selectedId, $periodeId);
+        foreach ($wis as $item) {
+            if (!empty($item['nomor_kursi']) && !empty($item['presensi_hadir_at'])) {
+                $occupied[$item['nomor_kursi']] = true;
+            }
+        }
+        $data = [
+            'title' => 'Ringkasan Sesi',
+            'periode' => $periode,
+            'sesi' => $sesi,
+            'sesi_list' => $sesiList,
+            'stats' => $stats,
+            'tidak_hadir' => $tidakHadir,
+            'rows' => $rows,
+            'max_col' => $maxCol,
+            'grid' => $grid,
+            'occupied' => $occupied
+        ];
+        $this->view('lo/overview', $data);
     }
     
     /**
@@ -51,6 +107,62 @@ class LOController extends Controller {
         ];
         
         $this->view('lo/denah', $data);
+    }
+
+    public function denahPeriode($periodeId, $sesiId = null) {
+        $periode = $this->periodeModel->find($periodeId);
+        if (!$periode) {
+            setFlash('danger', 'Periode tidak ditemukan');
+            $this->redirect('lo/dashboard');
+        }
+        $sesiList = $this->sesiModel->getByPeriode($periodeId);
+        if (empty($sesiList)) {
+            $data = [
+                'title' => 'Denah Periode',
+                'periode' => $periode,
+                'sesi_list' => [],
+                'rows' => [],
+                'max_col' => 0,
+                'grid' => [],
+                'occupied' => [],
+                'sesi' => ['id' => null, 'nama_sesi' => '-']
+            ];
+            $this->view('lo/denah_grid', $data);
+            return;
+        }
+        $selectedId = $sesiId ? (int)$sesiId : (int)$sesiList[0]['id'];
+        $sesi = $this->sesiModel->find($selectedId);
+        $denahModel = new DenahKursi();
+        $denah = $denahModel->getBySesi($selectedId);
+        $rows = [];
+        $maxCol = 0;
+        $grid = [];
+        foreach ($denah as $d) {
+            $rows[$d['baris']] = true;
+            $col = (int)$d['kolom'];
+            if ($col > $maxCol) { $maxCol = $col; }
+            $grid[$d['baris'] . '-' . $col] = $d['nomor_kursi'];
+        }
+        $rows = array_keys($rows);
+        sort($rows);
+        $occupied = [];
+        $wis = $this->wisudawanModel->getBySesi($selectedId, $periodeId);
+        foreach ($wis as $item) {
+            if (!empty($item['nomor_kursi']) && !empty($item['presensi_hadir_at'])) {
+                $occupied[$item['nomor_kursi']] = true;
+            }
+        }
+        $data = [
+            'title' => 'Denah Periode',
+            'periode' => $periode,
+            'sesi' => $sesi,
+            'sesi_list' => $sesiList,
+            'rows' => $rows,
+            'max_col' => $maxCol,
+            'grid' => $grid,
+            'occupied' => $occupied
+        ];
+        $this->view('lo/denah_grid', $data);
     }
     
     /**

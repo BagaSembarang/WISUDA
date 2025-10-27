@@ -78,9 +78,14 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-list"></i> Daftar Sesi Wisuda</h5>
-                    <a href="<?= url('sesi/create/' . $periode['id']) ?>" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus"></i> Tambah Sesi
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="<?= url('sesi/manageDenah/' . $periode['id']) ?>" class="btn btn-info btn-sm">
+                            <i class="fas fa-chair"></i> Kelola Denah
+                        </a>
+                        <a href="<?= url('sesi/create/' . $periode['id']) ?>" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Tambah Sesi
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <?php if (empty($sesi_list)): ?>

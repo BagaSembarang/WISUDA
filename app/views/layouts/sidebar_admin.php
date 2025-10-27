@@ -9,6 +9,9 @@
         <a class="nav-link" href="<?= url('presensi/index') ?>">
             <i class="fas fa-qrcode"></i> Presensi
         </a>
+        <a class="nav-link" href="<?= url('user/index') ?>">
+            <i class="fas fa-users"></i> Pengguna
+        </a>
         <a class="nav-link" href="<?= url('laporan/index') ?>">
             <i class="fas fa-file-alt"></i> Laporan
         </a>

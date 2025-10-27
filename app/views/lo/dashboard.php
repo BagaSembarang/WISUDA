@@ -16,7 +16,7 @@
                 </div>
                 <div class="card-body">
                     <?php foreach ($periodes as $periode): ?>
-                        <a href="<?= url('admin/viewPeriode/' . $periode['id']) ?>" class="btn btn-primary mb-2">
+                        <a href="<?= url('lo/overview/' . $periode['id']) ?>" class="btn btn-primary mb-2">
                             <?= e($periode['nama_periode']) ?>
                         </a>
                     <?php endforeach; ?>

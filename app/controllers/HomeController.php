@@ -18,7 +18,7 @@ class HomeController extends Controller {
                 $this->redirect('auth/logout');
             }
         } else {
-            $this->redirect('auth/login');
+            $this->redirect('lo/dashboard');
         }
     }
 }

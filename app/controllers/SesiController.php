@@ -221,4 +221,163 @@ class SesiController extends Controller {
             }
         }
     }
+
+    public function manageDenah($periodeId) {
+        $periode = $this->periodeModel->find($periodeId);
+        if (!$periode) {
+            setFlash('danger', 'Periode tidak ditemukan');
+            $this->redirect('admin/periode');
+        }
+        $sesiList = $this->sesiModel->getByPeriode($periodeId);
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $file = isset($_FILES['denah_excel']) ? $_FILES['denah_excel'] : null;
+            if (!$file || $file['error'] !== UPLOAD_ERR_OK || !isValidExcel($file)) {
+                setFlash('danger', 'File tidak valid');
+                $this->redirect('sesi/manageDenah/' . $periodeId);
+            }
+            try {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file['tmp_name']);
+                $sheet = $spreadsheet->getActiveSheet();
+                $highestRow = $sheet->getHighestRow();
+                $highestColumn = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($sheet->getHighestColumn());
+                $seats = [];
+                $used = [];
+                for ($r = 1; $r <= $highestRow; $r++) {
+                    $baris = $this->numToLetters($r);
+                    for ($c = 1; $c <= $highestColumn; $c++) {
+                        $val = trim((string)$sheet->getCellByColumnAndRow($c, $r)->getCalculatedValue());
+                        if ($val === '') { continue; }
+                        if (isset($used[$val])) { continue; }
+                        $used[$val] = true;
+                        $seats[] = [
+                            'nomor_kursi' => $val,
+                            'baris' => $baris,
+                            'kolom' => $c,
+                            'zona' => 'Utama'
+                        ];
+                    }
+                }
+                foreach ($sesiList as $s) {
+                    $this->denahModel->replaceForSesi($s['id'], $seats);
+                }
+                $this->activityLog->log(
+                    $_SESSION['user_id'],
+                    'import_denah_periode',
+                    'Import denah untuk periode ID: ' . $periodeId
+                );
+                setFlash('success', 'Denah berhasil diimpor dan diterapkan ke semua sesi pada periode ini');
+                $this->redirect('sesi/manageDenah/' . $periodeId);
+            } catch (Exception $e) {
+                setFlash('danger', 'Error: ' . $e->getMessage());
+                $this->redirect('sesi/manageDenah/' . $periodeId);
+            }
+        } else {
+            $data = [
+                'title' => 'Kelola Denah Periode',
+                'periode' => $periode,
+                'sesi_list' => $sesiList
+            ];
+            $this->view('admin/denah/index', $data);
+        }
+    }
+
+    public function previewDenah($periodeId, $sesiId) {
+        $periode = $this->periodeModel->find($periodeId);
+        if (!$periode) {
+            setFlash('danger', 'Periode tidak ditemukan');
+            $this->redirect('admin/periode');
+        }
+        $sesi = $this->sesiModel->find($sesiId);
+        if (!$sesi || (int)$sesi['periode_id'] !== (int)$periodeId) {
+            setFlash('danger', 'Sesi tidak valid');
+            $this->redirect('sesi/manageDenah/' . $periodeId);
+        }
+        $sesiList = $this->sesiModel->getByPeriode($periodeId);
+        $denah = $this->denahModel->getBySesi($sesiId);
+        $rows = [];
+        $maxCol = 0;
+        $grid = [];
+        foreach ($denah as $d) {
+            $rows[$d['baris']] = true;
+            $col = (int)$d['kolom'];
+            if ($col > $maxCol) { $maxCol = $col; }
+            $grid[$d['baris'] . '-' . $col] = $d['nomor_kursi'];
+        }
+        $rows = array_keys($rows);
+        sort($rows);
+        $occupied = [];
+        $w = new Wisudawan();
+        $wis = $w->getBySesi($sesiId, $periodeId);
+        foreach ($wis as $item) {
+            if (!empty($item['nomor_kursi'])) {
+                $occupied[$item['nomor_kursi']] = true;
+            }
+        }
+        $data = [
+            'title' => 'Preview Denah',
+            'periode' => $periode,
+            'sesi' => $sesi,
+            'sesi_list' => $sesiList,
+            'rows' => $rows,
+            'max_col' => $maxCol,
+            'grid' => $grid,
+            'occupied' => $occupied
+        ];
+        $this->view('admin/denah/preview', $data);
+    }
+
+    private function numToLetters($n) {
+        $r = '';
+        while ($n > 0) {
+            $n--;
+            $r = chr(65 + ($n % 26)) . $r;
+            $n = intdiv($n, 26);
+        }
+        return $r;
+    }
+
+    public function downloadDenahTemplate($periodeId) {
+        $rows = (int)$this->get('rows', 20);
+        $cols = (int)$this->get('cols', 12);
+        $type = strtolower((string)$this->get('type', 'blank'));
+        $start = (int)$this->get('start', 1);
+        $pad = (int)$this->get('pad', 3);
+        if ($rows < 1) { $rows = 1; }
+        if ($cols < 1) { $cols = 1; }
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Denah');
+        $endCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($cols);
+        $range = 'A1:' . $endCol . $rows;
+        $sheet->getStyle($range)->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+        for ($c = 1; $c <= $cols; $c++) { $sheet->getColumnDimensionByColumn($c)->setWidth(6.5); }
+        for ($r = 1; $r <= $rows; $r++) { $sheet->getRowDimension($r)->setRowHeight(20); }
+        if ($type === 'numeric') {
+            $n = $start;
+            for ($r = 1; $r <= $rows; $r++) {
+                for ($c = 1; $c <= $cols; $c++) {
+                    $sheet->setCellValueByColumnAndRow($c, $r, str_pad($n, $pad, '0', STR_PAD_LEFT));
+                    $n++;
+                }
+            }
+        } elseif ($type === 'vip') {
+            for ($c = 1; $c <= $cols; $c++) {
+                $sheet->setCellValueByColumnAndRow($c, 1, 'VIP ' . str_pad($c, 2, '0', STR_PAD_LEFT));
+            }
+            $n = $start;
+            for ($r = 2; $r <= $rows; $r++) {
+                for ($c = 1; $c <= $cols; $c++) {
+                    $sheet->setCellValueByColumnAndRow($c, $r, str_pad($n, $pad, '0', STR_PAD_LEFT));
+                    $n++;
+                }
+            }
+        }
+        $filename = 'template_denah_' . $type . '_' . $rows . 'x' . $cols . '.xlsx';
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
 }

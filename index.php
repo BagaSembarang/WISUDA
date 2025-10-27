@@ -66,6 +66,10 @@ if (isset($_GET['url'])) {
 }
 
 $request = trim($request, '/');
+// Normalize direct access to index.php as home
+if ($request === 'index.php') {
+    $request = '';
+}
 
 // Parse URL
 $parts = explode('/', $request);
@@ -91,7 +95,7 @@ try {
             if (error_reporting()) {
                 echo "<h1>Method not found</h1>";
                 echo "<p>Method: <code>{$method}</code> in <code>{$controllerName}</code></p>";
-                echo "<p><a href='" . BASE_URL . "index.php'>Go to Home</a></p>";
+                echo "<p><a href='" . BASE_URL . "index.php?url='>Go to Home</a></p>";
             } else {
                 echo "Page not found";
             }
@@ -103,7 +107,7 @@ try {
             echo "<h1>Controller not found</h1>";
             echo "<p>Controller: <code>{$controllerName}</code></p>";
             echo "<p>Looking for: <code>" . APP_PATH . '/controllers/' . $controllerName . '.php</code></p>';
-            echo "<p><a href='" . BASE_URL . "index.php'>Go to Home</a></p>";
+            echo "<p><a href='" . BASE_URL . "index.php?url='>Go to Home</a></p>";
         } else {
             echo "Page not found";
         }
@@ -114,7 +118,7 @@ try {
         echo "<h1>Error occurred</h1>";
         echo "<p style='color: red;'>" . $e->getMessage() . "</p>";
         echo "<pre>" . $e->getTraceAsString() . "</pre>";
-        echo "<p><a href='" . BASE_URL . "index.php'>Go to Home</a></p>";
+        echo "<p><a href='" . BASE_URL . "index.php?url='>Go to Home</a></p>";
     } else {
         echo "An error occurred";
     }

@@ -69,4 +69,32 @@ class DenahKursi extends Model {
             [$sesiId]
         );
     }
+    public function replaceForSesi($sesiId, $seats) {
+        $this->beginTransaction();
+        try {
+            $this->query("DELETE FROM {$this->table} WHERE sesi_id = ?", [$sesiId]);
+            foreach ($seats as $s) {
+                $nomor = isset($s['nomor_kursi']) ? $s['nomor_kursi'] : (isset($s['nomor']) ? $s['nomor'] : '');
+                $baris = isset($s['baris']) ? $s['baris'] : '';
+                $kolom = isset($s['kolom']) ? (int)$s['kolom'] : 0;
+                if ($nomor === '' || $baris === '' || $kolom <= 0) {
+                    continue;
+                }
+                $this->insert([
+                    'sesi_id' => $sesiId,
+                    'nomor_kursi' => $nomor,
+                    'baris' => $baris,
+                    'kolom' => $kolom,
+                    'zona' => isset($s['zona']) ? $s['zona'] : 'Utama',
+                    'status' => 'tersedia'
+                ]);
+            }
+            $this->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->rollback();
+            throw $e;
+        }
+    }
 }
+
