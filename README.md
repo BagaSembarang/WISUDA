@@ -33,7 +33,6 @@ Aplikasi manajemen acara wisuda universitas berbasis PHP native dengan arsitektu
 
 6. **Dashboard LO**
    - Monitoring denah kehadiran
-   - Scan undangan untuk cek lokasi kursi
 
 7. **Laporan**
    - Laporan presensi
@@ -74,9 +73,12 @@ mysql -u root -p < database/schema.sql
 http://localhost/WISUDA/
 ```
 
-6. Login default:
-   - Username: `admin`
-   - Password: `admin123`
+6. Login :
+username : 'admin'
+Password : 'password'
+
+akses ke LO :
+namafolder/index.php?url=lo/dashboard
 
 ## Struktur Folder
 
@@ -125,9 +127,4 @@ MIT License
 
 Untuk pertanyaan dan dukungan, silakan hubungi tim pengembang.
 
-Login :
-username : admin
-Password : password
 
-akses ke LO :
-namafolder/index.php?url=lo/dashboard
