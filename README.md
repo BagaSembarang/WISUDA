@@ -70,15 +70,15 @@ mysql -u root -p < database/schema.sql
 
 5. Akses aplikasi:
 ```
-http://localhost/WISUDA/
+http://localhost/namafolder/
 ```
 
 6. Login :
-username : 'admin'
-Password : 'password'
+   - username : `admin`
+   - Password : `password`
 
 akses ke LO :
-namafolder/index.php?url=lo/dashboard
+`namafolder/index.php?url=lo/dashboard`
 
 ## Struktur Folder
 
