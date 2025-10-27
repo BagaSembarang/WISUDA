@@ -124,3 +124,10 @@ MIT License
 ## Support
 
 Untuk pertanyaan dan dukungan, silakan hubungi tim pengembang.
+
+Login :
+username : admin
+Password : password
+
+akses ke LO :
+namafolder/index.php?url=lo/dashboard
