@@ -3,11 +3,7 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-2 p-0">
-            <?php require_once APP_PATH . '/views/layouts/sidebar_lo.php'; ?>
-        </div>
-        
-        <div class="col-md-10 p-4">
+        <div class="col-12 p-4">
             <h2 class="mb-4"><i class="fas fa-tachometer-alt"></i> Dashboard LO</h2>
             
             <div class="card">

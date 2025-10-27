@@ -3,11 +3,7 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-2 p-0">
-            <?php require_once APP_PATH . '/views/layouts/sidebar_lo.php'; ?>
-        </div>
-        
-        <div class="col-md-10 p-4">
+        <div class="col-12 p-4">
             <div class="mb-4">
                 <h2><i class="fas fa-map"></i> Denah Kehadiran</h2>
                 <h5 class="text-muted"><?= e($sesi['nama_sesi']) ?></h5>

@@ -306,11 +306,16 @@ class SesiController extends Controller {
         $rows = array_keys($rows);
         sort($rows);
         $occupied = [];
+        $occupied_norm = [];
         $w = new Wisudawan();
         $wis = $w->getBySesi($sesiId, $periodeId);
         foreach ($wis as $item) {
-            if (!empty($item['nomor_kursi'])) {
-                $occupied[$item['nomor_kursi']] = true;
+            if (!empty($item['nomor_kursi']) && !empty($item['presensi_hadir_at'])) {
+                $seat = trim((string)$item['nomor_kursi']);
+                $occupied[$seat] = true;
+                $norm = strtoupper(preg_replace('/[^A-Z0-9]/','', $seat));
+                $norm = preg_replace_callback('/\\d+/', function($m){ $v = ltrim($m[0], '0'); return $v === '' ? '0' : $v; }, $norm);
+                $occupied_norm[$norm] = true;
             }
         }
         $data = [
@@ -321,7 +326,8 @@ class SesiController extends Controller {
             'rows' => $rows,
             'max_col' => $maxCol,
             'grid' => $grid,
-            'occupied' => $occupied
+            'occupied' => $occupied,
+            'occupied_norm' => $occupied_norm
         ];
         $this->view('admin/denah/preview', $data);
     }

@@ -13,6 +13,12 @@ class LOController extends Controller {
         $this->sesiModel = $this->model('SesiWisuda');
         $this->periodeModel = $this->model('PeriodeWisuda');
     }
+
+    private function normalizeSeatLabel($label) {
+        $s = strtoupper(preg_replace('/[^A-Z0-9]/', '', (string)$label));
+        $s = preg_replace_callback('/\d+/', function($m){ $v = ltrim($m[0], '0'); return $v === '' ? '0' : $v; }, $s);
+        return $s;
+    }
     
     /**
      * Dashboard LO
@@ -55,19 +61,24 @@ class LOController extends Controller {
         $rows = [];
         $maxCol = 0;
         $grid = [];
+        $zones = [];
         foreach ($denah as $d) {
             $rows[$d['baris']] = true;
             $col = (int)$d['kolom'];
             if ($col > $maxCol) { $maxCol = $col; }
             $grid[$d['baris'] . '-' . $col] = $d['nomor_kursi'];
+            $zones[$d['baris'] . '-' . $col] = isset($d['zona']) ? $d['zona'] : '';
         }
         $rows = array_keys($rows);
         sort($rows);
         $occupied = [];
+        $occupied_norm = [];
         $wis = $this->wisudawanModel->getBySesi($selectedId, $periodeId);
         foreach ($wis as $item) {
-            if (!empty($item['nomor_kursi']) && !empty($item['presensi_hadir_at'])) {
-                $occupied[$item['nomor_kursi']] = true;
+            $seat = isset($item['nomor_kursi']) ? trim((string)$item['nomor_kursi']) : '';
+            if ($seat !== '' && !empty($item['presensi_hadir_at'])) {
+                $occupied[$seat] = true;
+                $occupied_norm[$this->normalizeSeatLabel($seat)] = true;
             }
         }
         $data = [
@@ -80,7 +91,9 @@ class LOController extends Controller {
             'rows' => $rows,
             'max_col' => $maxCol,
             'grid' => $grid,
-            'occupied' => $occupied
+            'zones' => $zones,
+            'occupied' => $occupied,
+            'occupied_norm' => $occupied_norm
         ];
         $this->view('lo/overview', $data);
     }
@@ -137,19 +150,24 @@ class LOController extends Controller {
         $rows = [];
         $maxCol = 0;
         $grid = [];
+        $zones = [];
         foreach ($denah as $d) {
             $rows[$d['baris']] = true;
             $col = (int)$d['kolom'];
             if ($col > $maxCol) { $maxCol = $col; }
             $grid[$d['baris'] . '-' . $col] = $d['nomor_kursi'];
+            $zones[$d['baris'] . '-' . $col] = isset($d['zona']) ? $d['zona'] : '';
         }
         $rows = array_keys($rows);
         sort($rows);
         $occupied = [];
+        $occupied_norm = [];
         $wis = $this->wisudawanModel->getBySesi($selectedId, $periodeId);
         foreach ($wis as $item) {
             if (!empty($item['nomor_kursi']) && !empty($item['presensi_hadir_at'])) {
-                $occupied[$item['nomor_kursi']] = true;
+                $seat = trim((string)$item['nomor_kursi']);
+                $occupied[$seat] = true;
+                $occupied_norm[$this->normalizeSeatLabel($seat)] = true;
             }
         }
         $data = [
@@ -160,7 +178,9 @@ class LOController extends Controller {
             'rows' => $rows,
             'max_col' => $maxCol,
             'grid' => $grid,
-            'occupied' => $occupied
+            'zones' => $zones,
+            'occupied' => $occupied,
+            'occupied_norm' => $occupied_norm
         ];
         $this->view('lo/denah_grid', $data);
     }

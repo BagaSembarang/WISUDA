@@ -3,71 +3,126 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-2 p-0">
-            <?php require_once APP_PATH . '/views/layouts/sidebar_lo.php'; ?>
-        </div>
-        <div class="col-md-10 p-4">
-            <div class="mb-4 d-flex justify-content-between align-items-center">
-                <div>
-                    <h2><i class="fas fa-th"></i> Denah Tempat Duduk</h2>
-                    <h5 class="text-muted"><?= e($periode['nama_periode']) ?> — <?= e($sesi['nama_sesi']) ?></h5>
-                </div>
-                <a href="<?= url('lo/dashboard') ?>" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Menu Utama
-                </a>
-            </div>
+        <div class="col-12 p-4">
+            <?php
+                $sessionColors = ['#2ecc71', '#e74c3c', '#f39c12', '#3498db', '#9b59b6', '#1abc9c'];
+                $selectedIndex = 0;
+                if (!empty($sesi_list)) {
+                    foreach ($sesi_list as $idx => $s) {
+                        if ((int)$s['id'] === (int)$sesi['id']) { $selectedIndex = $idx; break; }
+                    }
+                }
+                $currentColor = $sessionColors[$selectedIndex % count($sessionColors)];
+            ?>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+                :root { --current-color: <?= $currentColor ?>; }
+                body { background-color: #f8f9fa; color: #333; font-family: 'Poppins', sans-serif !important; }
+                .header-container { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+                .session-btn { font-weight: 500; letter-spacing: .3px; transition: all .3s; margin-bottom: 10px; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.08); color: #fff; }
+                .session-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+                .menu-btn { background-color: #34495e; color: #fff; }
+                .map-container { background: #fff; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); padding: 20px; margin: 0 auto; max-width: 900px; overflow-x: auto; }
+                .map-title { text-align: center; margin-bottom: 16px; color: #2c3e50; font-weight: 600; position: relative; }
+                .map-title:after { content: ''; display: block; width: 80px; height: 4px; background: linear-gradient(90deg, var(--current-color), transparent); margin: 10px auto 0; border-radius: 2px; }
+                .map-container { -webkit-overflow-scrolling: touch; }
+                .seat-map { width: auto; border-collapse: separate; border-spacing: 5px; margin: 0 auto; table-layout: fixed; }
+                .seat-map th { background-color: var(--current-color); color: #fff; padding: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; border-radius: 5px; }
+                .seat-map td { text-align: center; vertical-align: middle; font-weight: 500; border-radius: 5px; transition: all .3s; position: relative; width: 44px; min-width: 44px; height: 36px; padding: 2px; line-height: 1.05; word-break: break-all; background: #e9eef2; border: 1px solid #fff; }
+                .seat-map td.available-seat { background-color: #fff; color: #7f8c8d; box-shadow: 0 2px 5px rgba(0,0,0,.05); cursor: default; }
+                .seat-map td.available-seat:hover { transform: none; box-shadow: 0 2px 5px rgba(0,0,0,.08); }
+                .seat-map td.occupied-seat { background-color: #e74c3c; color: #fff; }
+                .aisle { background-color: #e9eef2; box-shadow: none; }
+                .legend { display: flex; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+                .legend-item { display: flex; align-items: center; margin: 0 15px 10px; }
+                .legend-color { width: 20px; height: 20px; border-radius: 4px; margin-right: 8px; }
+                @keyframes pulse { 0% { transform: scale(1);} 50% { transform: scale(1.05);} 100% { transform: scale(1);} }
+                @media (max-width: 768px) {
+                    .seat-map td { min-width: 34px; width: 34px; height: 30px; font-size: 9px; }
+                    .seat-map th { padding: 8px; font-size: 12px; }
+                    .session-btn { font-size: 13px; padding: 8px; }
+                }
+                @media (max-width: 576px) {
+                    .map-container { padding: 10px; }
+                    .seat-map td { min-width: 28px; width: 28px; height: 26px; font-size: 8px; }
+                }
+            </style>
 
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
-                        <?php foreach ($sesi_list as $s): ?>
-                            <a class="btn <?= ($s['id']==$sesi['id']?'btn-primary':'btn-outline-primary') ?>" href="<?= url('lo/denahPeriode/' . $periode['id'] . '/' . $s['id']) ?>">
-                                <i class="fas fa-door-open"></i> <?= e($s['nama_sesi']) ?>
+            <div class="header-container">
+                <div class="row g-2">
+                    <?php foreach ($sesi_list as $idx => $s): $btnColor = $sessionColors[$idx % count($sessionColors)]; ?>
+                        <div class="col-12 col-sm-4">
+                            <a href="<?= url('lo/denahPeriode/' . $periode['id'] . '/' . $s['id']) ?>" class="btn form-control session-btn" style="background-color: <?= $btnColor ?>;<?= (int)$s['id']===(int)$sesi['id'] ? ' filter: brightness(0.9);' : '' ?>">
+                                <i class="fas fa-calendar-day"></i> <?= e($s['nama_sesi']) ?>
                             </a>
-                        <?php endforeach; ?>
+                        </div>
+                    <?php endforeach; ?>
+                    <div class="col-12">
+                        <a href="<?= url('lo/dashboard') ?>" class="btn form-control session-btn menu-btn">
+                            <i class="fas fa-bars"></i> Menu Utama
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header"><strong>Denah</strong></div>
-                <div class="card-body">
-                    <?php if (empty($rows)): ?>
-                        <div class="alert alert-warning">Belum ada denah untuk sesi ini.</div>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-center align-middle" style="min-width: 700px;">
-                                <thead>
+            <div class="map-container">
+                <h2 class="map-title">DENAH TEMPAT DUDUK — <?= e($sesi['nama_sesi']) ?></h2>
+
+                <?php if (empty($rows)): ?>
+                    <div class="alert alert-warning">Belum ada denah untuk sesi ini.</div>
+                <?php else: ?>
+                    <div style="overflow-x: auto;">
+                        <table class="seat-map" style="min-width: <?= max(1,(int)$max_col) * 55 ?>px;">
+                            <thead>
+                                <tr>
+                                    <th colspan="<?= (int)$max_col ?>" style="text-align:center;">SENATOR</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($rows as $r): ?>
                                     <tr>
-                                        <th style="width:60px">Baris</th>
                                         <?php for ($c=1; $c <= $max_col; $c++): ?>
-                                            <th style="width:60px"><?= $c ?></th>
+                                            <?php 
+                                                $key = $r . '-' . $c; 
+                                                $label = $grid[$key] ?? ''; 
+                                                $isOcc = false;
+                                                if ($label !== '') {
+                                                    $norm = strtoupper(preg_replace('/[^A-Z0-9]/','', $label));
+                                                    $norm = preg_replace_callback('/\d+/', function($m){ $v = ltrim($m[0], '0'); return $v === '' ? '0' : $v; }, $norm);
+                                                    $isOcc = isset($occupied[$label]) || (isset($occupied_norm) && isset($occupied_norm[$norm]));
+                                                }
+                                            ?>
+                                            <?php if ($label === ''): ?>
+                                                <td class="aisle">&nbsp;</td>
+                                            <?php elseif ($isOcc): ?>
+                                                <td class="occupied-seat"><?= e($label) ?></td>
+                                            <?php else: ?>
+                                                <td class="available-seat"><?= e($label) ?></td>
+                                            <?php endif; ?>
                                         <?php endfor; ?>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($rows as $r): ?>
-                                        <tr>
-                                            <th><?= $r ?></th>
-                                            <?php for ($c=1; $c <= $max_col; $c++): ?>
-                                                <?php $key = $r . '-' . $c; $label = $grid[$key] ?? ''; $isOcc = ($label !== '' && isset($occupied[$label])); ?>
-                                                <td class="<?= $label!=='' ? ($isOcc ? 'table-danger' : 'table-success') : '' ?>" style="height:40px;">
-                                                    <?= $label !== '' ? e($label) : '&nbsp;' ?>
-                                                </td>
-                                            <?php endfor; ?>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="legend">
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #e74c3c;"></div>
+                            <span>Sudah Hadir</span>
                         </div>
-                        <div class="mt-3 d-flex gap-3">
-                            <span class="badge bg-success">Nomor tersedia</span>
-                            <span class="badge bg-danger">Nomor terpakai</span>
-                            <span class="badge bg-secondary">Kosong</span>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #fff; border: 1px solid #dee2e6;"></div>
+                            <span>Belum Hadir</span>
                         </div>
-                    <?php endif; ?>
-                </div>
+                        <div class="legend-item">
+                            <div class="legend-color" style="background-color: #e9eef2; border: 1px solid #fff;"></div>
+                            <span>Kosong (Lorong)</span>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
+            
         </div>
     </div>
 </div>
