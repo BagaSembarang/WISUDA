@@ -184,59 +184,98 @@ class LaporanController extends Controller {
         }
         
         $wisudawanList = $this->wisudawanModel->getBySesi($sesiId, $sesi['periode_id']);
-        $settingKupon = (new SettingKupon())->getByPeriode($sesi['periode_id']);
         
         $pdf = new FPDF('P', 'mm', 'A4');
+        $pdf->SetAutoPageBreak(false);
+        $pdf->AddPage();
+        $pdf->SetMargins(10, 10, 10);
+        
+        $ticket_width = 95;
+        $ticket_height = 50;
+        $margin_x = 10;
+        $margin_y = 10;
+        $gutter = 5;
+        $tickets_per_row = 2;
+        $tickets_per_page = 10;
+        
+        $ticket_count = 0;
         
         foreach ($wisudawanList as $w) {
-            $pdf->AddPage();
-            $pdf->SetFont('Arial', 'B', 14);
+            if ($ticket_count > 0 && $ticket_count % $tickets_per_page == 0) {
+                $pdf->AddPage();
+            }
             
-            // Header
-            if ($settingKupon && $settingKupon['template_header']) {
-                $pdf->MultiCell(0, 7, $settingKupon['template_header'], 0, 'C');
+            $row_index = floor(($ticket_count % $tickets_per_page) / $tickets_per_row);
+            $col_index = ($ticket_count % $tickets_per_page) % $tickets_per_row;
+            
+            $x = $margin_x + ($col_index * ($ticket_width + $gutter));
+            $y = $margin_y + ($row_index * ($ticket_height + $gutter));
+            
+            $nama_array = preg_split('/\s+/', trim((string)$w['nama_lengkap']));
+            $nama_display = implode(' ', array_slice($nama_array, 0, 3));
+            $nama_display = ucwords(strtolower($nama_display));
+            
+            if ((int)$sesiId === 1) {
+                $header_color = [80, 20, 92];
+            } else if ((int)$sesiId === 2) {
+                $header_color = [255, 237, 0];
+            } else if ((int)$sesiId === 3) {
+                $header_color = [100, 149, 237];
             } else {
-                $pdf->Cell(0, 10, 'KUPON WISUDA', 0, 1, 'C');
+                $header_color = [169, 169, 169];
             }
             
-            $pdf->Ln(5);
+            $pdf->SetFillColor(255, 255, 255);
+            $pdf->SetDrawColor(200, 200, 200);
+            $pdf->SetLineWidth(0.3);
+            $pdf->Rect($x, $y, $ticket_width, $ticket_height, 'DF');
             
-            // Body
-            $pdf->SetFont('Arial', '', 11);
-            $pdf->Cell(50, 7, 'Nama', 0, 0);
-            $pdf->Cell(5, 7, ':', 0, 0);
-            $pdf->Cell(0, 7, $w['nama_lengkap'], 0, 1);
+            $pdf->SetFillColor($header_color[0], $header_color[1], $header_color[2]);
+            $pdf->Rect($x, $y, $ticket_width, 15, 'F');
             
-            $pdf->Cell(50, 7, 'NIM', 0, 0);
-            $pdf->Cell(5, 7, ':', 0, 0);
-            $pdf->Cell(0, 7, $w['nim'], 0, 1);
-            
-            $pdf->Cell(50, 7, 'Program Studi', 0, 0);
-            $pdf->Cell(5, 7, ':', 0, 0);
-            $pdf->Cell(0, 7, $w['program_studi'], 0, 1);
-            
-            $pdf->Cell(50, 7, 'Nomor Kursi', 0, 0);
-            $pdf->Cell(5, 7, ':', 0, 0);
-            $pdf->Cell(0, 7, $w['nomor_kursi'], 0, 1);
-            
-            $pdf->Cell(50, 7, 'Kode Unik', 0, 0);
-            $pdf->Cell(5, 7, ':', 0, 0);
-            $pdf->Cell(0, 7, $w['kode_unik'], 0, 1);
-            
-            $pdf->Ln(10);
-            
-            // QR Code placeholder (you need to generate actual QR code)
-            $pdf->Cell(0, 7, '[QR CODE: ' . $w['kode_unik'] . ']', 0, 1, 'C');
-            
-            $pdf->Ln(10);
-            
-            // Footer
-            if ($settingKupon && $settingKupon['template_footer']) {
-                $pdf->MultiCell(0, 7, $settingKupon['template_footer'], 0, 'C');
+            $logoPath = BASE_PATH . '/public/img/LogoSCU.png';
+            if (!file_exists($logoPath)) {
+                $logoPath = BASE_PATH . '/vendor/setasign/fpdf/tutorial/logo.png';
             }
+            if (file_exists($logoPath)) {
+                $pdf->Image($logoPath, $x + 3, $y + 1, 13, 0, 'PNG');
+            }
+            
+            $pdf->SetFont('Helvetica', 'B', 11);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY($x + 20, $y + 2);
+            $pdf->Cell($ticket_width - 25, 6, 'KUPON KONSUMSI', 0, 1, 'C');
+            
+            $pdf->SetFont('Helvetica', '', 7);
+            $pdf->SetXY($x + 20, $y + 7);
+            $displayText = trim(($sesi['nama_periode'] ?? '') . ' - ' . ($sesi['nama_sesi'] ?? ''));
+            $pdf->Cell($ticket_width - 25, 5, $displayText, 0, 1, 'C');
+            
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY($x + 3, $y + 17);
+            $pdf->SetFont('Helvetica', 'B', 10);
+            $pdf->Cell(62, 5, $nama_display, 0, 1, 'L');
+            
+            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->SetXY($x + 3, $pdf->GetY());
+            $pdf->Cell(62, 4, 'NIM: ' . ($w['nim'] ?? ''), 0, 1, 'L');
+            
+            $pdf->SetXY($x + 3, $pdf->GetY());
+            $pdf->Cell(62, 4, 'Sesi: ' . ($sesi['nama_sesi'] ?? '') . ' / Kursi: ' . ($w['nomor_kursi'] ?? ''), 0, 1, 'L');
+            
+            if (!empty($w['kode_unik'])) {
+                $qr_code_url = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' . urlencode($w['kode_unik']) . '&ecc=M';
+                $pdf->Image($qr_code_url, $x + 69, $y + 18, 24, 0, 'PNG');
+            }
+            
+            $pdf->SetXY($x + 3, $y + 35);
+            $pdf->SetFont('Helvetica', 'I', 6);
+            $pdf->MultiCell($ticket_width - 6, 3, "- Pengambilan konsumsi oleh 1 perwakilan (1 paket isi 3 box).\n- Panduan lengkap wisuda: " . BASE_URL . "?i=" . ($w['kode_unik'] ?? ''), 0, 'L');
+            
+            $ticket_count++;
         }
         
-        $filename = 'Kupon_' . $sesi['nama_sesi'] . '_' . date('YmdHis') . '.pdf';
-        $pdf->Output('D', $filename);
+        $filename = 'Kupon_Konsumsi_' . preg_replace('/[^A-Za-z0-9_-]+/', '_', ($sesi['nama_sesi'] ?? 'Sesi')) . '.pdf';
+        $pdf->Output('I', $filename);
     }
 }
